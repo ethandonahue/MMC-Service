@@ -17,3 +17,11 @@ To run the service, use this command:
 ```bash
 npm run start
 ```
+
+## Testing
+
+To test the service, use this command:
+
+```bash
+npm test
+```
