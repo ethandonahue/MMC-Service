@@ -1,37 +1,4 @@
-import express from 'express';
-import { Client } from 'pg';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
-
-const app = express();
-const port = 3000;
-
-// PostgreSQL client setup
-const client = new Client({
-    user: 'postgres',
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PW,
-    port: parseInt(process.env.DB_PORT as string),
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
-
-// Connect to the PostgreSQL database
-client.connect()
-    .then(() => {
-        console.log('Connected to the PostgreSQL database');
-    })
-    .catch((err) => {
-        console.error('Connection error', err.stack);
-    });
-
-app.use(express.json());
-
-//#region Users
+import { app, client } from '@/server';
 
 // Create user
 app.post('/user', async (req: any, res: any) => {
@@ -137,11 +104,3 @@ app.delete('/user', async (req: any, res: any) => {
         res.status(500).send('Error deleting user');
     }
 });
-
-//#endregion
-
-app.listen(port, () => {
-    console.log(`Express is listening at http://localhost:${port}`);
-});
-
-export { app };
