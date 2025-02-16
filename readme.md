@@ -15,7 +15,7 @@ npm install
 To run the service, use this command:
 
 ```bash
-npm run start
+npm start
 ```
 
 ## Testing

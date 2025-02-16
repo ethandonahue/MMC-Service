@@ -7,7 +7,7 @@ const config: Config = {
     '^.+\\.ts$': 'ts-jest', 
   },
   moduleFileExtensions: ['ts', 'js'], 
-  testPathIgnorePatterns: ['/node_modules/'],  
+  testPathIgnorePatterns: ['/node_modules/'],
 };
 
 export default config;
