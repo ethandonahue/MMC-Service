@@ -1,5 +1,5 @@
 import request from "supertest";
-import { server } from "../../server";
+import { client, server } from "../../server";
 
 jest.setTimeout(10000);
 
@@ -27,6 +27,8 @@ describe("User API", () => {
       );
       expect(deleteResponse.status).toBe(200);
     }
+
+    client.end();
   });
 
   it("should retrieve all users", async () => {

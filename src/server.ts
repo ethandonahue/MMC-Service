@@ -31,9 +31,9 @@ client
 
 server.use(express.json());
 
-server.listen(port, () => {
-  console.log(`Express is listening at http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== "test") {
+  server.listen(port, () => console.log(`Listening on port ${port}`));
+}
 
 server.use("/", usersRoutes);
 server.use("/stats", statsRoutes);
