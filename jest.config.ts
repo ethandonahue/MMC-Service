@@ -8,9 +8,6 @@ const config: Config = {
   },
   moduleFileExtensions: ['ts', 'js'], 
   testPathIgnorePatterns: ['/node_modules/'],
-  // moduleNameMapper: {
-  //   '^@/(.*)$': '<rootDir>/src/$1',
-  // },  
 };
 
 export default config;
