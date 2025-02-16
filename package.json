@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "tsc && node dist/server.js",
-    "test": "jest --forceExit"
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
