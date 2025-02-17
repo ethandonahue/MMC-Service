@@ -2,7 +2,8 @@ import express from "express";
 import { Client } from "pg";
 import dotenv from "dotenv";
 import statsRoutes from "./routes/stats/stats.routes";
-import usersRoutes from "./routes/user/user.routes";
+import userRoutes from "./routes/user/user.routes";
+import leaguesRoutes from "./routes/leagues/leagues.routes";
 
 dotenv.config();
 
@@ -35,7 +36,8 @@ if (process.env.NODE_ENV !== "test") {
   server.listen(port, () => console.log(`Listening on port ${port}`));
 }
 
-server.use("/", usersRoutes);
+server.use("/", userRoutes);
 server.use("/stats", statsRoutes);
+server.use("/", leaguesRoutes);
 
 export { server, client };
