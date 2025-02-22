@@ -109,4 +109,53 @@ router.delete("/user", async (req: any, res: any) => {
   }
 });
 
+// Get userId by username
+router.get("/userId", async (req: any, res: any) => {
+  const { username } = req.query;
+
+  if (!username) {
+    return res.status(400).send("Username is required");
+  }
+
+  try {
+    const query = "SELECT userId FROM Users WHERE username = $1";
+    const values = [username];
+
+    const result = await client.query(query, values);
+
+    if (result.rows.length > 0) {
+      res.status(200).json({ userId: result.rows[0].userid });
+    } else {
+      res.status(404).send("Username not found");
+    }
+  } catch (error) {
+    console.error("Error retrieving userId:", error);
+    res.status(500).send("Error retrieving userId");
+  }
+});
+
+// Update username and profile picture
+router.put("/user", async (req: any, res: any) => {
+  const { userId } = req.query;
+  const { newUsername, newProfilePicId } = req.body;
+
+  if (!newUsername && !newProfilePicId) {
+      return res.status(400).send("At least one field (newUsername or profilePicId) is required for update.");
+  }
+  if (isNaN(userId)) {
+      return res.status(400).send("Invalid userId");
+  }
+  try {
+    const query = `UPDATE Users SET username = $1, profilePicId = $2 WHERE userId = $3 RETURNING *;`;
+    const values = [newUsername, newProfilePicId, userId];
+    const updateResult = await client.query(query, values);
+    if (updateResult.rows[0].username = newUsername && updateResult.rows[0].profilepicid == newProfilePicId) {
+      res.status(200).json("Updated username and profile picture");
+    }
+  } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).send("Error updating user");
+  }
+})
+
 export default router;
