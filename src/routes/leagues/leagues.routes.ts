@@ -1,30 +1,34 @@
 import { client } from "../../server";
 import { Router } from "express";
-import { nanoid } from "nanoid";
 
 const router = Router();
 
-// Create a league
+// Create a league and add the user as a member
 router.post("/league", async (req: any, res: any) => {
-  const { leagueName } = req.body;
+  const { leagueName, userId } = req.body;
 
-  if (!leagueName) {
-    return res.status(400).send("leagueName is required");
+  if (!leagueName || !userId) {
+    return res.status(400).send("leagueName and userId are required");
   }
 
   try {
-    const leagueCode = nanoid(6).toUpperCase();
+    const leagueCode = generateCode();
 
-    const query =
+    const leagueQuery =
       "INSERT INTO leagues (league_name, league_code) VALUES ($1, $2) RETURNING *";
-    const values = [leagueName, leagueCode];
+    const leagueValues = [leagueName, leagueCode];
+    const leagueResult = await client.query(leagueQuery, leagueValues);
+    const leagueId = leagueResult.rows[0].league_id;
 
-    const result = await client.query(query, values);
+    const memberQuery =
+      "INSERT INTO league_members (league_id, userid) VALUES ($1, $2) RETURNING *";
+    const memberValues = [leagueId, userId];
+    await client.query(memberQuery, memberValues);
 
-    res.status(200).json(result.rows[0]);
+    res.status(200).json(leagueResult.rows[0]);
   } catch (error) {
-    console.error("Error creating league:", error);
-    res.status(500).send("Error creating league");
+    console.error("Error creating league and adding user:", error);
+    res.status(500).send("Error creating league and adding user");
   }
 });
 
@@ -259,5 +263,47 @@ router.delete("/league/member", async (req: any, res: any) => {
     res.status(500).send("Error removing user from league");
   }
 });
+
+// Get leagues the user is not part of
+router.get("/leagues/not-joined", async (req: any, res: any) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).send("userId is required");
+  }
+
+  try {
+    const query = `
+      SELECT * FROM leagues 
+      WHERE league_id NOT IN (
+        SELECT league_id FROM league_members WHERE userid = $1
+      )
+    `;
+    const values = [userId];
+
+    const result = await client.query(query, values);
+
+    if (result.rows.length > 0) {
+      res.status(200).json(result.rows);
+    } else {
+      res.status(404).send("No leagues found that the user is not part of");
+    }
+  } catch (error) {
+    console.error("Error retrieving leagues not joined by user:", error);
+    res.status(500).send("Error retrieving leagues");
+  }
+});
+
+function generateCode(length: number = 6): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charactersLength);
+      result += characters[randomIndex];
+  }
+  return result;
+}
+
 
 export default router;
