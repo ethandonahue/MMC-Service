@@ -26,6 +26,32 @@ router.post("/user", async (req: any, res: any) => {
 
     const result = await client.query(query, values);
 
+    const newUser = result.rows[0];
+
+    const randomUserQuery = "SELECT userid FROM Users WHERE userid != $1 ORDER BY RANDOM() LIMIT 1";
+    const randomUserResult = await client.query(randomUserQuery, [newUser.userid]);
+
+    if (randomUserResult.rows.length > 0) {
+      const randomFriendId = randomUserResult.rows[0].userid;
+      await client.query(
+        "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($1, $2, TRUE)",
+        [newUser.userid, randomFriendId]
+      );
+    }
+
+    const fakeScore = Math.floor(Math.random() * 100);
+    const fakeTimePlayed = Math.floor(Math.random() * 3600); // Random seconds up to 1 hour
+    const currentUtcTime = new Date().toISOString(); // Get the current UTC time
+    
+    const gameSessionQuery = `
+      INSERT INTO game_sessions (user_id, score, time_played, created_at)
+      VALUES ($1, $2, MAKE_INTERVAL(secs := $3), $4)
+      RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
+    
+    const gameSessionValues = [newUser.userid, fakeScore, fakeTimePlayed, currentUtcTime];
+    
+    await client.query(gameSessionQuery, gameSessionValues);
+
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Error inserting user:", error);

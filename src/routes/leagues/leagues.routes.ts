@@ -59,10 +59,22 @@ router.get("/league", async (req: any, res: any) => {
 
 // Get all leagues
 router.get("/leagues", async (req: any, res: any) => {
-  try {
-    const query = "SELECT * FROM leagues";
+  const { userId } = req.query;
 
-    const result = await client.query(query);
+  if (!userId) {
+    return res.status(400).send("userId is required");
+  }
+
+  try {
+    const query = `
+      SELECT * FROM leagues 
+      WHERE league_id IN (
+        SELECT league_id FROM league_members WHERE userid = $1
+      )
+    `;
+    const values = [userId];
+
+    const result = await client.query(query, values);
 
     if (result.rows.length > 0) {
       res.status(200).json(result.rows);

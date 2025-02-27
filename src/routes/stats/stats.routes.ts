@@ -55,27 +55,22 @@ router.get("/userStatistics", async (req: any, res: any) => {
   }
 
   try {
-    // TODO: use real data when we actually have games working
-    // const query = `
-    //         SELECT 
-    //             MAX(score) AS best_score, 
-    //             TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS total_time_played
-    //         FROM game_sessions 
-    //         WHERE user_id = $1
-    //         GROUP BY user_id
-    //     `;
-    // const values = [userId];
-    // const result = await client.query(query, values);
+    const query = `
+            SELECT 
+                MAX(score) AS best_score, 
+                TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS total_time_played
+            FROM game_sessions 
+            WHERE user_id = $1
+            GROUP BY user_id
+        `;
+    const values = [userId];
+    const result = await client.query(query, values);
 
-    // if (result.rows.length > 0) {
-    //   res.status(200).json(result.rows[0]);
-    // } else {
-    //   res.status(404).send("User statistics not found");
-    // }
-    res.status(200).json({
-      best_score: 1500,
-      total_time_played: "12h 30m"
-  });
+    if (result.rows.length > 0) {
+      res.status(200).json(result.rows[0]);
+    } else {
+      res.status(404).send("User statistics not found");
+    }
   } catch (error) {
     console.error("Error retrieving user statistics:", error);
     res.status(500).send("Error retrieving user statistics");
