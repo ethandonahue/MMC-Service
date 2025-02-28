@@ -53,8 +53,16 @@ router.post("/send", async (req: any, res: any) => {
   }
 
   try {
+    const userCheckQuery = "SELECT userid FROM users WHERE userid = ANY($1)";
+    const userCheckValues = [[userid, friendid]];
+    const userCheckResult = await client.query(userCheckQuery, userCheckValues);
+
+    if (userCheckResult.rows.length !== 2) {
+      return res.status(404).send("One or both users do not exist.");
+    }
+    
     const checkQuery =
-      "SELECT * FROM friend_requests WHERE userid = $1 AND friendid = $2 AND ispending = TRUE";
+      "SELECT * FROM friend_requests WHERE userid = $1 AND friendid = $2";
     const checkValues = [userid, friendid];
     const checkResult = await client.query(checkQuery, checkValues);
 
@@ -65,12 +73,12 @@ router.post("/send", async (req: any, res: any) => {
     }
 
     const query =
-      "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($1, $2, TRUE) RETURNING *";
+      "INSERT INTO friend_requests (userid, friendid) VALUES ($1, $2) RETURNING *";
     const values = [userid, friendid];
 
     const result = await client.query(query, values);
 
-    res.status(201).json(result.rows[0]);
+    res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Error sending friend request:", error);
     res.status(500).send("Error sending friend request");
@@ -253,33 +261,33 @@ router.delete("/request", async (req: any, res: any) => {
 });
 
 // Get all friend ids of a user by userid
-router.get("/", async (req: any, res: any) => {
-  const { userId } = req.query;
+// router.get("/", async (req: any, res: any) => {
+//   const { userId } = req.query;
 
-  if (!userId) {
-    return res.status(400).send("userId is required");
-  }
+//   if (!userId) {
+//     return res.status(400).send("userId is required");
+//   }
 
-  if (isNaN(userId)) {
-    return res.status(400).send("Invalid userId");
-  }
+//   if (isNaN(userId)) {
+//     return res.status(400).send("Invalid userId");
+//   }
 
-  try {
-    const query = "SELECT * FROM friends WHERE userid = $1";
-    const values = [userId];
-    const result = await client.query(query, values);
+//   try {
+//     const query = "SELECT * FROM friends WHERE userid = $1";
+//     const values = [userId];
+//     const result = await client.query(query, values);
 
-    if (result.rows.length > 0) {
-      const friendIds = result.rows.map(row => row.friendid);
-      res.status(200).json(friendIds);
-    } else {
-      res.status(404).send("User not found");
-    }
-  } catch (error) {
-    console.error("Error retrieving user's friends:", error);
-    res.status(500).send("Error retrieving user's friends");
-  }
+//     if (result.rows.length > 0) {
+//       const friendIds = result.rows.map(row => row.friendid);
+//       res.status(200).json(friendIds);
+//     } else {
+//       res.status(404).send("User not found");
+//     }
+//   } catch (error) {
+//     console.error("Error retrieving user's friends:", error);
+//     res.status(500).send("Error retrieving user's friends");
+//   }
 
-})
+// })
 
 export default router;

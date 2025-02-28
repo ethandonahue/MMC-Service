@@ -1,8 +1,6 @@
 import request from "supertest";
 import { client, server } from "../../server";
 
-jest.setTimeout(10000);
-
 describe("User API", () => {
   let userId: string;
 

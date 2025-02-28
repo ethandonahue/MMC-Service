@@ -1,5 +1,8 @@
 import { client } from "../../server";
 import { Router } from "express";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const router = Router();
 
@@ -26,31 +29,41 @@ router.post("/user", async (req: any, res: any) => {
 
     const result = await client.query(query, values);
 
-    const newUser = result.rows[0];
+    if (process.env.NODE_ENV !== "test") {
+      const newUser = result.rows[0];
 
-    const randomUserQuery = "SELECT userid FROM Users WHERE userid != $1 ORDER BY RANDOM() LIMIT 1";
-    const randomUserResult = await client.query(randomUserQuery, [newUser.userid]);
+      const randomUserQuery =
+        "SELECT userid FROM Users WHERE userid != $1 ORDER BY RANDOM() LIMIT 1";
+      const randomUserResult = await client.query(randomUserQuery, [
+        newUser.userid,
+      ]);
 
-    if (randomUserResult.rows.length > 0) {
-      const randomFriendId = randomUserResult.rows[0].userid;
-      await client.query(
-        "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($1, $2, TRUE)",
-        [newUser.userid, randomFriendId]
-      );
-    }
+      if (randomUserResult.rows.length > 0) {
+        const randomFriendId = randomUserResult.rows[0].userid;
+        await client.query(
+          "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($1, $2, TRUE)",
+          [newUser.userid, randomFriendId]
+        );
+      }
 
-    const fakeScore = Math.floor(Math.random() * 100);
-    const fakeTimePlayed = Math.floor(Math.random() * 3600); // Random seconds up to 1 hour
-    const currentUtcTime = new Date().toISOString(); // Get the current UTC time
-    
-    const gameSessionQuery = `
+      const fakeScore = Math.floor(Math.random() * 100);
+      const fakeTimePlayed = Math.floor(Math.random() * 3600);
+      const currentUtcTime = new Date().toISOString();
+
+      const gameSessionQuery = `
       INSERT INTO game_sessions (user_id, score, time_played, created_at)
       VALUES ($1, $2, MAKE_INTERVAL(secs := $3), $4)
       RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
-    
-    const gameSessionValues = [newUser.userid, fakeScore, fakeTimePlayed, currentUtcTime];
-    
-    await client.query(gameSessionQuery, gameSessionValues);
+
+      const gameSessionValues = [
+        newUser.userid,
+        fakeScore,
+        fakeTimePlayed,
+        currentUtcTime,
+      ];
+
+      await client.query(gameSessionQuery, gameSessionValues);
+    }
 
     res.status(200).json(result.rows[0]);
   } catch (error) {
@@ -166,22 +179,29 @@ router.put("/user", async (req: any, res: any) => {
   const { newUsername, newProfilePicId } = req.body;
 
   if (!newUsername && !newProfilePicId) {
-      return res.status(400).send("At least one field (newUsername or profilePicId) is required for update.");
+    return res
+      .status(400)
+      .send(
+        "At least one field (newUsername or profilePicId) is required for update."
+      );
   }
   if (isNaN(userId)) {
-      return res.status(400).send("Invalid userId");
+    return res.status(400).send("Invalid userId");
   }
   try {
     const query = `UPDATE Users SET username = $1, profilePicId = $2 WHERE userId = $3 RETURNING *;`;
     const values = [newUsername, newProfilePicId, userId];
     const updateResult = await client.query(query, values);
-    if (updateResult.rows[0].username = newUsername && updateResult.rows[0].profilepicid == newProfilePicId) {
+    if (
+      (updateResult.rows[0].username =
+        newUsername && updateResult.rows[0].profilepicid == newProfilePicId)
+    ) {
       res.status(200).json("Updated username and profile picture");
     }
   } catch (error) {
-      console.error("Error updating user:", error);
-      res.status(500).send("Error updating user");
+    console.error("Error updating user:", error);
+    res.status(500).send("Error updating user");
   }
-})
+});
 
 export default router;
