@@ -16,7 +16,7 @@ router.get("/appSettings", async (req: any, res: any) => {
 
     try {
         const query = `
-            SELECT user_id AS userId, audio_level as audioLevel, language, theme
+            SELECT *
             FROM app_settings
             WHERE user_id = $1
         `;
@@ -29,7 +29,7 @@ router.get("/appSettings", async (req: any, res: any) => {
             res.status(404).send("App settings not found");
         }
     } catch (error) {
-        console.error("Error retrieving app settings:", error);
+        console.error("Error retrieving app settings: ", error);
         res.status(500).send("Error retrieving app settings");
     }
 });
@@ -84,7 +84,7 @@ router.get("/gameSettings", async (req: any, res: any) => {
 
     try {
         const query = `
-            SELECT user_id AS userId, game_id as gameId, difficulty
+            SELECT *
             FROM game_settings
             WHERE user_id = $1 AND game_id = $2
         `;
@@ -94,11 +94,11 @@ router.get("/gameSettings", async (req: any, res: any) => {
         if (result.rows.length > 0) {
             res.status(200).json(result.rows[0]);
         } else {
-            res.status(404).send('Game ${gameId} settings not found');
+            res.status(404).send(`Game ${gameId} settings not found`);
         }
     } catch (error) {
-        console.error('Error retrieving game ${gameID} settings: ${error}');
-        res.status(500).send('Error retrieving game ${gameID} settings');
+        console.error(`Error retrieving game ${gameId} settings: ${error}`);
+        res.status(500).send(`Error retrieving game ${gameId} settings`);
     }
 });
 
@@ -134,8 +134,8 @@ router.post("/gameSettings", async (req: any, res: any) => {
 
         res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error updating game ${gameId} settings: ${error}');
-        res.status(500).send('Error updating game ${gameId} settings');
+        console.error(`Error updating game ${gameId} settings: ${error}`);
+        res.status(500).send(`Error updating game ${gameId} settings`);
     }
 });
 
