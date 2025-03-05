@@ -138,3 +138,5 @@ router.post("/gameSettings", async (req: any, res: any) => {
         res.status(500).send('Error updating game ${gameId} settings');
     }
 });
+
+export default router;

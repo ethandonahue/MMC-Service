@@ -5,6 +5,7 @@ import statsRoutes from "./routes/stats/stats.routes";
 import userRoutes from "./routes/user/user.routes";
 import leaguesRoutes from "./routes/leagues/leagues.routes";
 import friendsRoutes from "./routes/friends/friends.routes";
+import settingsRoutes from "./routes/settings/settings.routes";
 
 dotenv.config();
 
@@ -41,5 +42,6 @@ server.use("/", userRoutes);
 server.use("/stats", statsRoutes);
 server.use("/", leaguesRoutes);
 server.use("/friend", friendsRoutes);
+server.use("/", settingsRoutes);
 
 export { server, client };
