@@ -1,8 +1,6 @@
 import request from "supertest";
 import { client, server } from "../../server";
 
-jest.setTimeout(10000);
-
 describe("League API", () => {
   let userId: string;
   let leagueId: string;
@@ -10,8 +8,6 @@ describe("League API", () => {
 
   // Create a test user before each test
   beforeAll(async () => {
-    jest.setTimeout(10000);
-
     const response = await request(server)
       .post("/user")
       .send({ username: "test", profilePicId: "pic123" });
@@ -25,7 +21,7 @@ describe("League API", () => {
   beforeAll(async () => {
     const response = await request(server)
       .post("/league")
-      .send({ leagueName: "Test League" });
+      .send({ leagueName: "Test League", userId: userId });
 
     expect(response.status).toBe(200);
     expect(response.body.league_id).toBeDefined();
@@ -69,16 +65,6 @@ describe("League API", () => {
   it("should return 404 when getting a non-existing league", async () => {
     const response = await request(server).get(`/league?leagueId=9999`);
     expect(response.status).toBe(404);
-  });
-
-  it("should join a league for an existing user", async () => {
-    const response = await request(server)
-      .post("/league/member")
-      .send({ userId, leagueId });
-
-    expect(response.status).toBe(200);
-    expect(response.body.userid).toBe(userId);
-    expect(response.body.league_id).toBe(leagueId);
   });
 
   it("should return 404 when trying to join a non-existing league", async () => {

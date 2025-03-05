@@ -1,15 +1,11 @@
 import request from "supertest";
 import { client, server } from "../../server";
 
-jest.setTimeout(10000);
-
 describe("Stats API", () => {
   let userId: string;
 
   //Create a test user before each test
   beforeAll(async () => {
-    jest.setTimeout(10000);
-
     const response = await request(server)
       .post("/user")
       .send({ username: "test", profilePicId: "pic123" });
