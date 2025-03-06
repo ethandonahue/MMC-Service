@@ -42,9 +42,9 @@ router.post("/userGameSession", async (req: any, res: any) => {
   }
 });
 
-// GET: User's best score and total time played
+// GET: User's best scores and total time played within a given number of days
 router.get("/userStatistics", async (req: any, res: any) => {
-  const { userId } = req.query;
+  const { userId, days } = req.query;
 
   if (!userId) {
     return res.status(400).send("userId is required");
@@ -54,23 +54,56 @@ router.get("/userStatistics", async (req: any, res: any) => {
     return res.status(400).send("Invalid userId");
   }
 
+  const daysAgo = days ? parseInt(days, 10) : 1;
   try {
-    const query = `
-            SELECT 
-                MAX(score) AS best_score, 
-                TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS total_time_played
-            FROM game_sessions 
-            WHERE user_id = $1
-            GROUP BY user_id
-        `;
-    const values = [userId];
-    const result = await client.query(query, values);
+    const topScoresQuery = `
+      SELECT 
+          score AS "high score",
+          created_at::DATE AS "day",
+          TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS time_played
+      FROM game_sessions
+      WHERE user_id = $1 
+        AND created_at >= NOW() - INTERVAL '1 day' * $2
+      GROUP BY created_at::DATE, score
+      ORDER BY score DESC
+      LIMIT 3;
+    `;
 
-    if (result.rows.length > 0) {
-      res.status(200).json(result.rows[0]);
-    } else {
-      res.status(404).send("User statistics not found");
-    }
+    const topScoresResult = await client.query(topScoresQuery, [
+      userId,
+      daysAgo,
+    ]);
+
+    let totalTimePlayed = 0;
+    const scores: { score: any; date: string }[] = [];
+
+    topScoresResult.rows.forEach((row) => {
+      const [hours, minutes, seconds] = row.time_played.split(":").map(Number);
+      const timeInSeconds = hours * 3600 + minutes * 60 + seconds;
+
+      totalTimePlayed += timeInSeconds;
+
+      const formattedDate = new Date(row.day).toLocaleDateString();
+
+      scores.push({
+        score: row["high score"],
+        date: formattedDate,
+      });
+    });
+
+    const totalHours = Math.floor(totalTimePlayed / 3600);
+    const totalMinutes = Math.floor((totalTimePlayed % 3600) / 60);
+    const totalSeconds = totalTimePlayed % 60;
+    const formattedTotalTime = `${String(totalHours).padStart(2, "0")}:${String(
+      totalMinutes
+    ).padStart(2, "0")}:${String(totalSeconds).padStart(2, "0")}`;
+
+    const response = {
+      time_played: formattedTotalTime,
+      scores: scores,
+    };
+
+    res.status(200).send(response);
   } catch (error) {
     console.error("Error retrieving user statistics:", error);
     res.status(500).send("Error retrieving user statistics");

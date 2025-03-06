@@ -41,9 +41,9 @@ if (process.env.NODE_ENV !== "test") {
 server.get("/status", async (req, res) => {
   try {
     await client.query("SELECT 1");
-    res.status(200);
+    res.status(200).send();
   } catch (error) {
-    res.status(500);
+    res.status(500).send();
   }
 });
 
