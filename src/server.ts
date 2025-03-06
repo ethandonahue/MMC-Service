@@ -38,6 +38,16 @@ if (process.env.NODE_ENV !== "test") {
   server.listen(port, () => console.log(`Listening on port ${port}`));
 }
 
+server.get("/status", async (req, res) => {
+  try {
+    await client.query("SELECT 1");
+    res.status(200);
+  } catch (error) {
+    res.status(500);
+  }
+});
+
+
 server.use("/", userRoutes);
 server.use("/stats", statsRoutes);
 server.use("/", leaguesRoutes);
