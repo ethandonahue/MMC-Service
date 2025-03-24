@@ -58,12 +58,13 @@ router.post("/user", async (req: any, res: any) => {
         const currentUtcTime = createdAt.toISOString();
     
         const gameSessionQuery = `
-        INSERT INTO game_sessions (user_id, score, time_played, created_at)
-        VALUES ($1, $2, MAKE_INTERVAL(secs := $3), $4)
+        INSERT INTO game_sessions (user_id, game_id, score, time_played, created_at)
+        VALUES ($1, $2, $3, MAKE_INTERVAL(secs := $4), $5)
         RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
     
         const gameSessionValues = [
             newUser.userid,
+            1,
             score,
             timePlayed,
             currentUtcTime,
