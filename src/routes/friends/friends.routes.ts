@@ -192,7 +192,7 @@ router.get("/requests/pending", async (req: any, res: any) => {
 
   try {
     const query =
-      "SELECT u.userid, u.username, u.profilepicid, f.request_id FROM friend_requests f JOIN users u ON u.userid = f.friendid WHERE f.userid = $1";
+      "SELECT u.userid, u.username, u.profilepicid, f.request_id FROM friend_requests f JOIN users u ON u.userid = f.userid WHERE f.friendid = $1";
     const values = [userid];
 
     const result = await client.query(query, values);
@@ -218,7 +218,7 @@ router.get("/requests/sent", async (req: any, res: any) => {
 
   try {
     const query =
-      "SELECT * FROM friend_requests WHERE friendid = $1";
+      "SELECT u.userid, u.username, u.profilepicid, f.request_id FROM friend_requests f JOIN users u ON u.userid = f.friendid WHERE f.userid = $1";
     const values = [userid];
 
     const result = await client.query(query, values);

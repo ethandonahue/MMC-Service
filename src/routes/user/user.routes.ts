@@ -41,7 +41,7 @@ router.post("/user", async (req: any, res: any) => {
       if (randomUserResult.rows.length > 0) {
         const randomFriendId = randomUserResult.rows[0].userid;
         await client.query(
-          "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($1, $2, TRUE)",
+          "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($2, $1, TRUE)",
           [newUser.userid, randomFriendId]
         );
       }
