@@ -177,17 +177,13 @@ router.get("/topScores", async (req: any, res: any) => {
 });
 
 router.get("/games", async (req: any, res: any) => {
-  const { sortType = "1", playCountType = "everyone", userId } = req.query;
+  const { playCountType = "everyone", userId } = req.query;
 
-  if (sortType !== "0" && sortType !== "1") {
-    return res.status(400).send("Invalid sortType. Use '0' for ascending or '1' for descending.");
-  }
 
   if (playCountType !== "everyone" && playCountType !== "me") {
     return res.status(400).send("Invalid playCountType. Use 'everyone' or 'me'.");
   }
 
-  const orderDirection = sortType === "1" ? "DESC" : "ASC";
   let additionalWhereClause = '';
 
   if (playCountType === "me" && !userId) {
@@ -200,14 +196,13 @@ router.get("/games", async (req: any, res: any) => {
 
   try {
     const query = `
-      SELECT g.id AS game_id, g.name, g.icon_name, COUNT(gs.game_id) AS session_count
+      SELECT g.id AS game_id, COUNT(gs.game_id) AS session_count
       FROM games g
       LEFT JOIN game_sessions gs ON gs.game_id = g.id
       ${playCountType === "me" ? "LEFT JOIN users u ON gs.user_id = u.userid" : ""}
       WHERE 1=1
       ${additionalWhereClause}
-      GROUP BY g.id, g.name, g.icon_name
-      ORDER BY session_count ${orderDirection};
+      GROUP BY g.id;
     `;
 
     const result = await client.query(query);
