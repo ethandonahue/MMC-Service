@@ -47,31 +47,32 @@ router.post("/user", async (req: any, res: any) => {
       }
 
       const gameSessions = [
-        { score: 500, timePlayed: 1.5 * 3600, daysAgo: 0 },
-        { score: 10, timePlayed: 2 * 3600, daysAgo: 5 },
-        { score: 1000, timePlayed: 3 * 3600, daysAgo: 20 }
-    ];
-    
-    gameSessions.forEach(async ({ score, timePlayed, daysAgo }) => {
+        { score: 500, timePlayed: 1.5 * 3600, daysAgo: 0, id: 1 },
+        { score: 10, timePlayed: 2 * 3600, daysAgo: 5, id: 1 },
+        { score: 1000, timePlayed: 3 * 3600, daysAgo: 20, id: 1 },
+        { score: 999, timePlayed: 10 * 3600, daysAgo: 3, id: 2 },
+      ];
+
+      gameSessions.forEach(async ({ score, timePlayed, daysAgo, id }) => {
         const createdAt = new Date();
         createdAt.setDate(createdAt.getDate() - daysAgo);
         const currentUtcTime = createdAt.toISOString();
-    
+
         const gameSessionQuery = `
         INSERT INTO game_sessions (user_id, game_id, score, time_played, created_at)
         VALUES ($1, $2, $3, MAKE_INTERVAL(secs := $4), $5)
         RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
-    
+
         const gameSessionValues = [
-            newUser.userid,
-            1,
-            score,
-            timePlayed,
-            currentUtcTime,
+          newUser.userid,
+          id,
+          score,
+          timePlayed,
+          currentUtcTime,
         ];
-    
+
         await client.query(gameSessionQuery, gameSessionValues);
-    });
+      });
     }
 
     res.status(200).json(result.rows[0]);

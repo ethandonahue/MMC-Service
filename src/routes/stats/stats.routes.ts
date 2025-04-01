@@ -44,7 +44,7 @@ router.post("/userGameSession", async (req: any, res: any) => {
 
 // GET: User's best scores and total time played within a given number of days
 router.get("/userStatistics", async (req: any, res: any) => {
-  const { userId, days, gameId } = req.query;
+  const { userId, days } = req.query;
 
   if (!userId) {
     return res.status(400).send("userId is required");
@@ -57,56 +57,56 @@ router.get("/userStatistics", async (req: any, res: any) => {
   const daysAgo = days ? parseInt(days, 10) : 1;
 
   try {
-    const baseQuery = `
+    const totalTimeQuery = `
       SELECT 
-          score AS "high score",
-          created_at::DATE AS "day",
-          TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS time_played
+        TO_CHAR(SUM(time_played), 'HH24:MI:SS') AS total_time_played
       FROM game_sessions
       WHERE user_id = $1
-        AND created_at >= NOW() - INTERVAL '1 day' * $2
-        ${gameId ? "AND game_id = $3" : ""}
-      GROUP BY created_at::DATE, score
-      ORDER BY score DESC
-      LIMIT 3;
+        AND created_at >= NOW() - INTERVAL '1 day' * $2;
     `;
+    const totalTimeParams = [userId, daysAgo];
 
-    const queryParams: any[] = [userId, daysAgo];
-    if (gameId) {
-      if (isNaN(gameId)) {
-        return res.status(400).send("Invalid gameId");
-      }
-      queryParams.push(gameId);
-    }
+    const totalTimeResult = await client.query(totalTimeQuery, totalTimeParams);
 
-    const topScoresResult = await client.query(baseQuery, queryParams);
+    const totalTimePlayed =
+      totalTimeResult.rows[0]?.total_time_played || "00:00:00";
 
-    let totalTimePlayed = 0;
-    const scores: { score: any; date: string }[] = [];
+    const highScoreQuery = `
+      SELECT 
+        gs.game_id,
+        g.name AS game_name,
+        g.icon_name AS icon,
+        gs.score,
+        EXTRACT(HOUR FROM SUM(gs.time_played)) AS hours,
+        gs.session_id
+      FROM game_sessions gs
+      JOIN games g ON gs.game_id = g.id
+      WHERE gs.user_id = $1
+        AND gs.created_at >= NOW() - INTERVAL '1 day' * $2
+        AND gs.score = (
+          SELECT MAX(score)
+          FROM game_sessions
+          WHERE user_id = $1
+            AND created_at >= NOW() - INTERVAL '1 day' * $2
+            AND game_id = gs.game_id
+        )
+      GROUP BY gs.game_id, g.name, g.icon_name, gs.score, gs.session_id
+      ORDER BY gs.score DESC;
+    `;
+    const highScoreParams = [userId, daysAgo];
 
-    topScoresResult.rows.forEach((row) => {
-      const [hours, minutes, seconds] = row.time_played.split(":").map(Number);
-      const timeInSeconds = hours * 3600 + minutes * 60 + seconds;
+    const topScoresResult = await client.query(highScoreQuery, highScoreParams);
 
-      totalTimePlayed += timeInSeconds;
-
-      const formattedDate = new Date(row.day).toLocaleDateString();
-
-      scores.push({
-        score: row["high score"],
-        date: formattedDate,
-      });
-    });
-
-    const totalHours = Math.floor(totalTimePlayed / 3600);
-    const totalMinutes = Math.floor((totalTimePlayed % 3600) / 60);
-    const totalSeconds = totalTimePlayed % 60;
-    const formattedTotalTime = `${String(totalHours).padStart(2, "0")}:${String(
-      totalMinutes
-    ).padStart(2, "0")}:${String(totalSeconds).padStart(2, "0")}`;
+    const scores = topScoresResult.rows.map((row) => ({
+      gameName: row.game_name,
+      icon: row.icon,
+      score: row.score,
+      hours: parseInt(row.hours, 10) || 0,
+      sessionId: row.session_id,
+    }));
 
     const response = {
-      time_played: formattedTotalTime,
+      total_time_played: totalTimePlayed,
       scores: scores,
     };
 
@@ -116,7 +116,6 @@ router.get("/userStatistics", async (req: any, res: any) => {
     res.status(500).send("Error retrieving user statistics");
   }
 });
-
 
 // DELETE: Remove all game sessions for a user
 router.delete("/userGameSessions", async (req: any, res: any) => {
@@ -179,12 +178,13 @@ router.get("/topScores", async (req: any, res: any) => {
 router.get("/games", async (req: any, res: any) => {
   const { playCountType = "everyone", userId } = req.query;
 
-
   if (playCountType !== "everyone" && playCountType !== "me") {
-    return res.status(400).send("Invalid playCountType. Use 'everyone' or 'me'.");
+    return res
+      .status(400)
+      .send("Invalid playCountType. Use 'everyone' or 'me'.");
   }
 
-  let additionalWhereClause = '';
+  let additionalWhereClause = "";
 
   if (playCountType === "me" && !userId) {
     return res.status(400).send("userId is required for 'me' playCountType.");
@@ -199,7 +199,11 @@ router.get("/games", async (req: any, res: any) => {
       SELECT g.id AS game_id, COUNT(gs.game_id) AS session_count
       FROM games g
       LEFT JOIN game_sessions gs ON gs.game_id = g.id
-      ${playCountType === "me" ? "LEFT JOIN users u ON gs.user_id = u.userid" : ""}
+      ${
+        playCountType === "me"
+          ? "LEFT JOIN users u ON gs.user_id = u.userid"
+          : ""
+      }
       WHERE 1=1
       ${additionalWhereClause}
       GROUP BY g.id;
@@ -208,11 +212,11 @@ router.get("/games", async (req: any, res: any) => {
     const result = await client.query(query);
 
     if (result.rows.length > 0) {
-      const formattedResult = result.rows.map(row => ({
+      const formattedResult = result.rows.map((row) => ({
         game_id: row.game_id,
         name: row.name,
         icon_name: row.icon_name,
-        session_count: parseInt(row.session_count, 10)
+        session_count: parseInt(row.session_count, 10),
       }));
 
       res.status(200).json(formattedResult);
@@ -224,8 +228,5 @@ router.get("/games", async (req: any, res: any) => {
     res.status(500).send("Error retrieving game popularity");
   }
 });
-
-
-
 
 export default router;
