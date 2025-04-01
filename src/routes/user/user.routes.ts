@@ -213,4 +213,57 @@ router.put("/user", async (req: any, res: any) => {
   }
 });
 
+// Get badges
+router.get("/badges", async (req: any, res: any) => {
+    const { userId } = req.query;
+
+    if (isNaN(userId)) {
+      return res.status(400).send("Invalid userId");
+    }
+    try {
+      const query = `SELECT badges FROM Users WHERE userId = $1;`;
+      const values = [userId];
+      const result = await client.query(query, values);
+
+      if (result.rows.length > 0) {
+        res.status(200).json(result.rows[0]);
+      } else {
+        res.status(404).send("Badges not found");
+      }
+    } catch (error) {
+      console.error("Error retrieving badges:", error);
+      res.status(500).send("Error retrieving badges");
+    }
+})
+
+// Update badge
+router.put("/badges", async (req: any, res: any) => {
+  const { userId } = req.query
+  const { badge } = req.body
+
+  if (!badge) {
+    return res
+      .status(400)
+      .send(
+        "Badge name is required for update."
+      );
+  }
+  if (isNaN(userId)) {
+    return res.status(400).send("Invalid userId");
+  }
+
+  try {
+    const query = `UPDATE Users SET badges = array_append(badges, $1) WHERE userId = $2 RETURNING *;`;
+    const values = [badge, userId];
+    const updateResult = await client.query(query, values);
+    if (updateResult.rowCount != null && updateResult.rowCount > 0) {
+      res.status(200).json("Updated badge");
+    } else {
+      res.status(404).send("User not found");
+    }
+  } catch (error) {
+    console.error("Error adding badge for the user:", error);
+    res.status(500).send("Error adding badge for the user");
+  }
+})
 export default router;
