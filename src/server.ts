@@ -6,6 +6,7 @@ import userRoutes from "./routes/user/user.routes";
 import leaguesRoutes from "./routes/leagues/leagues.routes";
 import friendsRoutes from "./routes/friends/friends.routes";
 import settingsRoutes from "./routes/settings/settings.routes";
+import missionsRoutes from "./routes/missions/missions.routes"
 
 dotenv.config();
 
@@ -41,7 +42,7 @@ if (process.env.NODE_ENV !== "test") {
 server.get("/status", async (req, res) => {
   try {
     await client.query("SELECT 1");
-    res.status(200).send();
+    res.status(200).send("Service is working");
   } catch (error) {
     res.status(500).send();
   }
@@ -53,5 +54,6 @@ server.use("/stats", statsRoutes);
 server.use("/", leaguesRoutes);
 server.use("/friend", friendsRoutes);
 server.use("/", settingsRoutes);
+server.use("/", missionsRoutes);
 
 export { server, client };
