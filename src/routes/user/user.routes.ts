@@ -1,17 +1,20 @@
 import { client } from "../../server";
 import { Router } from "express";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 
 const router = Router();
 
-// Create user
-router.post("/user", async (req: any, res: any) => {
-  const { username, profilePicId } = req.body;
+const SALT_ROUNDS = 10;
 
-  if (!username) {
-    return res.status(400).send("username is required");
+// Create user with password
+router.post("/user", async (req: any, res: any) => {
+  const { username, password, profilePicId } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).send("Username and password are required");
   }
 
   try {
@@ -23,62 +26,49 @@ router.post("/user", async (req: any, res: any) => {
       return res.status(400).send("Username already exists");
     }
 
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
     const query =
-      "INSERT INTO Users (username, profilePicId) VALUES ($1, $2) RETURNING *";
-    const values = [username, profilePicId];
-
+      "INSERT INTO Users (username, password, profilePicId) VALUES ($1, $2, $3) RETURNING *";
+    const values = [username, hashedPassword, profilePicId];
     const result = await client.query(query, values);
-
-    if (process.env.NODE_ENV !== "test") {
-      const newUser = result.rows[0];
-
-      const randomUserQuery =
-        "SELECT userid FROM Users WHERE userid != $1 ORDER BY RANDOM() LIMIT 1";
-      const randomUserResult = await client.query(randomUserQuery, [
-        newUser.userid,
-      ]);
-
-      if (randomUserResult.rows.length > 0) {
-        const randomFriendId = randomUserResult.rows[0].userid;
-        await client.query(
-          "INSERT INTO friend_requests (userid, friendid, ispending) VALUES ($2, $1, TRUE)",
-          [newUser.userid, randomFriendId]
-        );
-      }
-
-      const gameSessions = [
-        { score: 500, timePlayed: 1.5 * 3600, daysAgo: 0, id: 1 },
-        { score: 10, timePlayed: 2 * 3600, daysAgo: 5, id: 1 },
-        { score: 1000, timePlayed: 3 * 3600, daysAgo: 20, id: 1 },
-        { score: 999, timePlayed: 10 * 3600, daysAgo: 3, id: 2 },
-      ];
-
-      gameSessions.forEach(async ({ score, timePlayed, daysAgo, id }) => {
-        const createdAt = new Date();
-        createdAt.setDate(createdAt.getDate() - daysAgo);
-        const currentUtcTime = createdAt.toISOString();
-
-        const gameSessionQuery = `
-        INSERT INTO game_sessions (user_id, game_id, score, time_played, created_at)
-        VALUES ($1, $2, $3, MAKE_INTERVAL(secs := $4), $5)
-        RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
-
-        const gameSessionValues = [
-          newUser.userid,
-          id,
-          score,
-          timePlayed,
-          currentUtcTime,
-        ];
-
-        await client.query(gameSessionQuery, gameSessionValues);
-      });
-    }
 
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Error inserting user:", error);
     res.status(500).send("Error inserting user");
+  }
+});
+
+// Sign in user
+router.post("/signin", async (req: any, res: any) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).send("Username and password are required");
+  }
+
+  try {
+    const query = "SELECT * FROM Users WHERE username = $1";
+    const values = [username];
+    const result = await client.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).send("User not found");
+    }
+
+    const user = result.rows[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).send("Incorrect password");
+    }
+
+    res.status(200).json({ userId: user.userid, username: user.username });
+  } catch (error) {
+    console.error("Error during sign-in:", error);
+    res.status(500).send("Error during sign-in");
   }
 });
 
@@ -216,26 +206,26 @@ router.put("/user", async (req: any, res: any) => {
 
 // Get badges
 router.get("/badges", async (req: any, res: any) => {
-    const { userId } = req.query;
+  const { userId } = req.query;
 
-    if (isNaN(userId)) {
-      return res.status(400).send("Invalid userId");
-    }
-    try {
-      const query = `SELECT badges FROM Users WHERE userId = $1;`;
-      const values = [userId];
-      const result = await client.query(query, values);
+  if (isNaN(userId)) {
+    return res.status(400).send("Invalid userId");
+  }
+  try {
+    const query = `SELECT badges FROM Users WHERE userId = $1;`;
+    const values = [userId];
+    const result = await client.query(query, values);
 
-      if (result.rows.length > 0) {
-        res.status(200).json(result.rows[0]);
-      } else {
-        res.status(404).send("Badges not found");
-      }
-    } catch (error) {
-      console.error("Error retrieving badges:", error);
-      res.status(500).send("Error retrieving badges");
+    if (result.rows.length > 0) {
+      res.status(200).json(result.rows[0]);
+    } else {
+      res.status(404).send("Badges not found");
     }
-})
+  } catch (error) {
+    console.error("Error retrieving badges:", error);
+    res.status(500).send("Error retrieving badges");
+  }
+});
 
 // Update badge
 router.put("/badges", async (req: any, res: any) => {
@@ -267,4 +257,5 @@ router.put("/badges", async (req: any, res: any) => {
     res.status(500).send("Error adding badge for the user");
   }
 })
+
 export default router;
