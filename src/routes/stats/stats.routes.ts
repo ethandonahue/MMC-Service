@@ -229,4 +229,43 @@ router.get("/games", async (req: any, res: any) => {
   }
 });
 
+// GET: Top 20 highest scoring friends for a given game
+router.get("/topFriendsScores", async (req: any, res: any) => {
+  const { userId, gameId } = req.query;
+
+  if (!userId || !gameId) {
+    return res.status(400).send("userId and gameId are required");
+  }
+
+  if (isNaN(userId) || isNaN(gameId)) {
+    return res.status(400).send("Invalid userId or gameId");
+  }
+
+  try {
+    const query = `
+      SELECT u.userid, u.username, u.profilepicid, MAX(gs.score) AS highscore
+      FROM friends f
+      JOIN users u ON f.friendid = u.userid
+      LEFT JOIN game_sessions gs ON gs.user_id = u.userid AND gs.game_id = $2
+      WHERE f.userid = $1
+      GROUP BY u.userid, u.username, u.profilepicid
+      ORDER BY highscore DESC NULLS LAST
+      LIMIT 20
+    `;
+
+    const values = [userId, gameId];
+    const result = await client.query(query, values);
+
+    if (result.rows.length > 0) {
+      res.status(200).json(result.rows);
+    } else {
+      res.status(404).send("No friends or scores found");
+    }
+  } catch (error) {
+    console.error("Error retrieving top friends' scores:", error);
+    res.status(500).send("Error retrieving top friends' scores");
+  }
+});
+
+
 export default router;
