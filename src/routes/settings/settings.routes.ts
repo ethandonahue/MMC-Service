@@ -35,10 +35,10 @@ router.get("/appSettings", async (req: any, res: any) => {
 });
 
 router.post("/appSettings", async (req: any, res: any) => {
-    const { userId, audioLevel, language, theme } = req.body;
+    const { userId, audioLevel, language, theme, mode } = req.body;
 
-    if (!userId || !audioLevel || !language || !theme) {
-        return res.status(400).send("userId, audioLevel, language, and theme are required");
+    if (!userId || !audioLevel || !language || !theme || !mode) {
+        return res.status(400).send("userId, audioLevel, language, theme, and mode are required");
     }
 
     if (isNaN(userId) || isNaN(audioLevel)) {
@@ -55,13 +55,13 @@ router.post("/appSettings", async (req: any, res: any) => {
         }
 
         const query = `
-            INSERT INTO app_settings (user_id, audio_level, language, theme)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO app_settings (user_id, audio_level, language, theme, mode)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (user_id)
-            DO UPDATE SET audio_level = $2, language = $3, theme = $4
+            DO UPDATE SET audio_level = $2, language = $3, theme = $4, mode = $5
         `;
 
-        const values = [userId, audioLevel, language, theme];
+        const values = [userId, audioLevel, language, theme, mode];
         const result = await client.query(query, values);
 
         res.status(200).json(result.rows[0]);
