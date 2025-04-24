@@ -105,7 +105,7 @@ router.get("/gameSettings", async (req: any, res: any) => {
 router.post("/gameSettings", async (req: any, res: any) => {
     const { userId, gameId, difficulty, theme, mode } = req.body;
 
-    if (!userId || !gameId || !difficulty || !theme, !mode) {
+    if (!userId || !gameId || !difficulty || !theme || !mode) {
         return res.status(400).send("userId, gameId, difficulty, theme, and mode are required");
     }
 
