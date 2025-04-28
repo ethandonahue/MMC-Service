@@ -35,10 +35,10 @@ router.get("/appSettings", async (req: any, res: any) => {
 });
 
 router.post("/appSettings", async (req: any, res: any) => {
-    const { userId, audioLevel, language, theme } = req.body;
+    const { userId, audioLevel, language, theme, mode } = req.body;
 
-    if (!userId || !audioLevel || !language || !theme) {
-        return res.status(400).send("userId, audioLevel, language, and theme are required");
+    if (!userId || !audioLevel || !language || !theme || !mode) {
+        return res.status(400).send("userId, audioLevel, language, theme, and mode are required");
     }
 
     if (isNaN(userId) || isNaN(audioLevel)) {
@@ -55,13 +55,13 @@ router.post("/appSettings", async (req: any, res: any) => {
         }
 
         const query = `
-            INSERT INTO app_settings (user_id, audio_level, language, theme)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO app_settings (user_id, audio_level, language, theme, mode)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (user_id)
-            DO UPDATE SET audio_level = $2, language = $3, theme = $4
+            DO UPDATE SET audio_level = $2, language = $3, theme = $4, mode = $5
         `;
 
-        const values = [userId, audioLevel, language, theme];
+        const values = [userId, audioLevel, language, theme, mode];
         const result = await client.query(query, values);
 
         res.status(200).json(result.rows[0]);
@@ -103,10 +103,10 @@ router.get("/gameSettings", async (req: any, res: any) => {
 });
 
 router.post("/gameSettings", async (req: any, res: any) => {
-    const { userId, gameId, difficulty, theme } = req.body;
+    const { userId, gameId, difficulty, theme, mode } = req.body;
 
-    if (!userId || !gameId || !difficulty || !theme) {
-        return res.status(400).send("userId, gameId, difficulty, and theme are required");
+    if (!userId || !gameId || !difficulty || !theme || !mode) {
+        return res.status(400).send("userId, gameId, difficulty, theme, and mode are required");
     }
 
     if (isNaN(userId) || isNaN(gameId)) {
@@ -123,13 +123,13 @@ router.post("/gameSettings", async (req: any, res: any) => {
         }
 
         const query = `
-            INSERT INTO game_settings (user_id, game_id, difficulty, theme)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO game_settings (user_id, game_id, difficulty, theme, mode)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (user_id, game_id)
-            DO UPDATE SET difficulty = $3, theme = $4
+            DO UPDATE SET difficulty = $3, theme = $4, mode = $5
         `;
 
-        const values = [userId, gameId, difficulty, theme];
+        const values = [userId, gameId, difficulty, theme, mode];
         const result = await client.query(query, values);
 
         res.status(200).json(result.rows[0]);
