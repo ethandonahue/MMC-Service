@@ -131,16 +131,16 @@ wss.on("connection", (ws: WebSocket) => {
         }
 
         case "START_GAME": {
-          const { code, userId } = payload;
-          const lobby = lobbies[code];
+          const { lobbyCode, userId } = payload;
+          const lobby = lobbies[lobbyCode];
 
-          if (!lobby || lobby.hostId !== userId) {
+          if (!lobby) {
             return ws.send(JSON.stringify({ type: "ERROR", payload: "Only host can start the game." }));
           }
 
           lobby.started = true;
 
-          broadcast(code, {
+          broadcast(lobbyCode, {
             type: "GAME_STARTED",
             payload: { players: Object.values(lobby.players) },
           });
