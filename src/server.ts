@@ -57,7 +57,7 @@ interface Player {
   userId: number;
   username: string;
   score: number;
-  eliminated: boolean;
+  health: number;
 }
 
 interface Lobby {
@@ -96,7 +96,7 @@ wss.on("connection", (ws: WebSocket) => {
         case "CREATE_LOBBY": {
           const { userId, username } = payload;
           const code = generateLobbyCode();
-          const player: Player = { userId, username, score: 0, eliminated: false };
+          const player: Player = { userId, username, score: 0, health: 5 };
 
           lobbies[code] = {
             code,
@@ -106,7 +106,7 @@ wss.on("connection", (ws: WebSocket) => {
           };
           playerSockets[userId] = ws;
 
-          ws.send(JSON.stringify({ type: "LOBBY_CREATED", payload: { code } }));
+          ws.send(JSON.stringify({ type: "LOBBY_CREATED", payload: { code, userId, username } }));
           break;
         }
 
@@ -118,7 +118,7 @@ wss.on("connection", (ws: WebSocket) => {
             return ws.send(JSON.stringify({ type: "ERROR", payload: "Invalid or started lobby." }));
           }
 
-          const player: Player = { userId, username, score: 0, eliminated: false };
+          const player: Player = { userId, username, score: 0, health: 5 };
           lobby.players[userId] = player;
           playerSockets[userId] = ws;
 
@@ -148,16 +148,18 @@ wss.on("connection", (ws: WebSocket) => {
           break;
         }
 
-        case "UPDATE_SCORE": {
-          const { code, userId, score, eliminated } = payload;
+        case "UPDATE_USER": {
+          const { code, userId, score, health } = payload;
           const lobby = lobbies[code];
-          if (!lobby || !lobby.players[userId]) return;
+          if (!lobby || !lobby.players[userId]){
+            return;
+          }
 
           lobby.players[userId].score = score;
-          lobby.players[userId].eliminated = eliminated;
+          lobby.players[userId].health = health;
 
           broadcast(code, {
-            type: "SCORE_UPDATED",
+            type: "USER_UPDATED",
             payload: Object.values(lobby.players),
           });
 
