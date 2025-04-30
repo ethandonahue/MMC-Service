@@ -176,10 +176,48 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
+
+app.post("/update-score", async (req: any, res: any) => {
+  const { code, userId, score, health } = req.body;
+  
+  const lobby = lobbies[code];
+  if (!lobby || !lobby.players[userId]) {
+    return res.status(400).json({ error: "Player not found in lobby." });
+  }
+
+  lobby.players[userId].score = score;
+  lobby.players[userId].health = health;
+
+  res.status(200).json({ message: "Score updated successfully." });
+});
+
+app.get("/get-scores/:code", async (req: any, res: any) => {
+  const { code } = req.params;
+
+  const lobby = lobbies[code];
+  if (!lobby) {
+      return res.status(404).json({ error: "Lobby not found" });
+  }
+
+  const playerScores = Object.values(lobby.players).map(player => ({
+      userId: player.userId,
+      username: player.username,
+      score: player.score,
+      health: player.health
+  }));
+
+  res.status(200).json(playerScores);
+});
+
+
+
+
 if (process.env.NODE_ENV !== "test") {
   server.listen(port, () => {
     console.log(`Listening on port ${port}`);
   });
 }
+
+
 
 export { app as server, client };
