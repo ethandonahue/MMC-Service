@@ -65,7 +65,7 @@ router.post("/signin", async (req: any, res: any) => {
       return res.status(400).send("Incorrect password");
     }
 
-    res.status(200).json({ userId: user.userid, username: user.username });
+    res.status(200).json({ userid: user.userid, username: user.username });
   } catch (error) {
     console.error("Error during sign-in:", error);
     res.status(500).send("Error during sign-in");
