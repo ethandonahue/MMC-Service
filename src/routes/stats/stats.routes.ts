@@ -4,10 +4,10 @@ import { Router } from "express";
 const router = Router();
 
 router.post("/userGameSession", async (req: any, res: any) => {
-  const { userId, score, timePlayed } = req.body;
+  const { userId, score, timePlayed, gameId } = req.body;
 
-  if (!userId || !score || !timePlayed) {
-    return res.status(400).send("userId, score, and timePlayed are required");
+  if (!userId || !score || !timePlayed || !gameId) {
+    return res.status(400).send("userId, score, gameid, and timePlayed are required");
   }
 
   if (isNaN(userId) || isNaN(score)) {
@@ -28,11 +28,11 @@ router.post("/userGameSession", async (req: any, res: any) => {
     const currentUtcTime = new Date().toISOString();
 
     const query = `
-            INSERT INTO game_sessions (user_id, score, time_played, created_at)
-            VALUES ($1, $2, $3, $4)
-            RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at`;
+            INSERT INTO game_sessions (user_id, score, time_played, created_at, game_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING user_id, score, TO_CHAR(time_played, 'HH24:MI:SS') AS time_played, created_at, game_id`;
 
-    const values = [userId, score, timePlayed, currentUtcTime];
+    const values = [userId, score, timePlayed, currentUtcTime, gameId];
     const result = await client.query(query, values);
 
     res.status(200).json(result.rows[0]);
@@ -243,12 +243,26 @@ router.get("/topFriendsScores", async (req: any, res: any) => {
 
   try {
     const query = `
-      SELECT u.userid, u.username, u.profilepicid, MAX(gs.score) AS highscore
-      FROM friends f
-      JOIN users u ON f.friendid = u.userid
-      LEFT JOIN game_sessions gs ON gs.user_id = u.userid AND gs.game_id = $2
-      WHERE f.userid = $1
-      GROUP BY u.userid, u.username, u.profilepicid
+      WITH friend_scores AS (
+        SELECT u.userid, u.username, u.profilepicid, MAX(gs.score) AS highscore
+        FROM friends f
+        JOIN users u ON f.friendid = u.userid
+        LEFT JOIN game_sessions gs ON gs.user_id = u.userid AND gs.game_id = $2
+        WHERE f.userid = $1
+        GROUP BY u.userid, u.username, u.profilepicid
+      ),
+      user_score AS (
+        SELECT u.userid, u.username, u.profilepicid, MAX(gs.score) AS highscore
+        FROM users u
+        LEFT JOIN game_sessions gs ON gs.user_id = u.userid AND gs.game_id = $2
+        WHERE u.userid = $1
+        GROUP BY u.userid, u.username, u.profilepicid
+      )
+      SELECT * FROM (
+        SELECT * FROM friend_scores
+        UNION
+        SELECT * FROM user_score
+      ) combined
       ORDER BY highscore DESC NULLS LAST
       LIMIT 20
     `;
@@ -256,16 +270,13 @@ router.get("/topFriendsScores", async (req: any, res: any) => {
     const values = [userId, gameId];
     const result = await client.query(query, values);
 
-    if (result.rows.length > 0) {
-      res.status(200).json(result.rows);
-    } else {
-      res.status(404).send("No friends or scores found");
-    }
+    res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error retrieving top friends' scores:", error);
     res.status(500).send("Error retrieving top friends' scores");
   }
 });
+
 
 
 export default router;
